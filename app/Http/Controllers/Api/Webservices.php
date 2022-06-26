@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class Webservices extends Controller
 {
+    public function __construct(){
+        $this->object = new \stdClass();
+    }
     public function register(Request $request){
         $validator = Validator::make($request->all(), [
             'name' => 'required',
@@ -24,7 +27,7 @@ class Webservices extends Controller
             return response()->json([
                 'status'=>FALSE,
                 'message'=>$validator->errors(),
-                'data' => []
+                'data' => $this->object
             ],401);
         else:
             try{
@@ -48,14 +51,14 @@ class Webservices extends Controller
                 return response()->json([
                     'status' => TRUE,
                     'message' => 'Registration successfull !',
-                    'data'      => $this->data
+                    'data'      => $this->object
                 ], 200);
             }catch(\Exception $e){
                 // print $e->getMessage(); die;
                 return response()->json([
                     'status' => FALSE,
                     'message' => 'Oops Sank! Something went terribly wrong !',
-                    'data'      => []
+                    'data'      => $this->object
                 ], 500);
             }
             // return response()->json($request->all(),200);
@@ -74,14 +77,34 @@ class Webservices extends Controller
        return  JWT::encode($token, config('jwt.key'),'HS256');
     }
 
+    private function tokenAuth()
+    {
+        $responseFromBoot = Auth::guard('api')->user();
+        if(!is_null($responseFromBoot) && isset($responseFromBoot->statusCode)):
+            header('Content-type: application/json');
+            http_response_code($responseFromBoot->statusCode);
+            print json_encode([
+                'status'    =>$responseFromBoot->status,
+                'message'   =>$responseFromBoot->message,
+                'data'      =>$responseFromBoot->data
+            ]);
+            exit;
+        else:
+            $this->ApiUserId = $responseFromBoot->id;
+            $this->ApiUserDeviceToken = $responseFromBoot->deviceToken;
+            $this->ApiUserEmail = $responseFromBoot->email;
+        endif;
+    }
+
     public function profileDetails(Request $request)
     {
-        $this->data['userDetails']=User::select('name','email')->find(Auth::guard('api')->user()->id)->first();
+        // $this->tokenAuth();
+        $this->data['userDetails']=User::select('name','email')->where('id',Auth::guard('api')->user()->id)->first();
         return response()->json([
                     'status'=>FALSE,
                     'message'=>'Data available!!',
                     'data' => $this->data
-                ],401);
+                ],200);
 
     }
     

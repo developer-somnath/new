@@ -28,14 +28,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Auth::viaRequest('jwt', function (Request $request) {
-
+            header('Content-type: application/json');
             if(is_null($request->bearerToken())):
-                return (object)[
+                $response = [
                     'status' => FALSE,
                     'message' => 'Authorization token not present in the request !',
-                    'statusCode'=>401,
-                    'data'      => []
+                    'data'      => (object)[]
                    ];
+                http_response_code(401);
+                print json_encode($response);
+                exit;
             endif;
             try{
                 $tokenPayload = JWT::decode($request->bearerToken(), new Key(config('jwt.key'), 'HS256'));
@@ -44,28 +46,34 @@ class AppServiceProvider extends ServiceProvider
                     if ($tokenPayload->expireTime > time()) :
                         return $tokenPayload;
                     else:
-                        return (object)[
+                        $response =  (object)[
                             'status' => FALSE,
                             'message' => 'Token has been expired!',
-                            'statusCode'=>440,
-                            'data'      => []
+                            'data'      => (object)[]
                         ];
+                        http_response_code(440);
+                        print json_encode($response);
+                        exit;
                     endif;
                 else:
-                    return (object)[
+                    $response =  (object)[
                         'status' => FALSE,
                         'message' => 'Invalid Authorization token!',
-                        'statusCode'=>401,
-                        'data'      => []
-                       ];
+                        'data'      => (object)[]
+                    ];
+                    http_response_code(401);
+                    print json_encode($response);
+                    exit;
                 endif;
             } catch(\Exception $e){
-               return (object)[
-                'status' => FALSE,
-                'message' => 'Oops Sank! Something went terribly wrong !',
-                'statusCode'=>500,
-                'data'      => []
-               ];
+                $response =  [
+                    'status' => FALSE,
+                    'message' => 'Oops Sank! Something went terribly wrong !',
+                    'data'      => (object)[]
+                ];
+                http_response_code(401);
+                print json_encode($response);
+                exit;
             }
         });
     }
